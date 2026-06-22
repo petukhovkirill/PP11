@@ -1,0 +1,13 @@
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+DO $$
+DECLARE
+    v_secret_key BYTEA := 'MedStock_Super_Secret_Key_2026!1'::BYTEA; 
+BEGIN
+    UPDATE system_users 
+    SET password_hash = encode(
+        encrypt(password_hash::BYTEA, v_secret_key, 'aes'), 
+        'hex'
+    );
+    RAISE NOTICE 'Пароли зашифрованы.';
+END $$;

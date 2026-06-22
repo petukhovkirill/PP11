@@ -1,0 +1,32 @@
+BEGIN;
+
+INSERT INTO archived_stock_logs (
+    id, batch_id, employee_id, department_id, 
+    operation_type, operation_date, quantity, total_cost
+)
+SELECT 
+    so.id, so.batch_id, so.employee_id, so.department_id, 
+    so.operation_type, so.operation_date, so.quantity, so.total_cost
+FROM stock_operations so
+JOIN batches b ON so.batch_id = b.id
+WHERE b.current_quantity = 0 
+  AND so.operation_date < CURRENT_DATE - INTERVAL '3 years';
+
+DELETE FROM stock_operations
+WHERE id IN (
+    SELECT so.id
+    FROM stock_operations so
+    JOIN batches b ON so.batch_id = b.id
+    WHERE b.current_quantity = 0 
+      AND so.operation_date < CURRENT_DATE - INTERVAL '3 years'
+);
+
+COMMIT;
+
+DO $$
+DECLARE
+    archived_count INT;
+BEGIN
+    SELECT COUNT(*) INTO archived_count FROM archived_stock_logs;
+    RAISE NOTICE 'Архивация завершена. Всего записей в архиве: %', archived_count;
+END $$;

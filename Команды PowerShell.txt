@@ -1,0 +1,9 @@
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+
+$env:STOCK_ADMIN_PASSWORD = "AdminPass456!"
+$env:STOCK_APP_PASSWORD = "AppPass789!"
+$env:PGSUPERUSER_PASSWORD = "1234"
+
+C:\MedStock\Setup-MedStockDB.ps1
+C:\MedStock\Backup-MedStockDB.ps1
+C:\MedStock\Restore-MedStockDB.ps1

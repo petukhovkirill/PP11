@@ -1,0 +1,92 @@
+CREATE TABLE accounting_groups (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(50) UNIQUE NOT NULL
+);
+
+CREATE TABLE departments (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) UNIQUE NOT NULL
+);
+
+CREATE TABLE medicaments (
+    id SERIAL PRIMARY KEY,
+    inn VARCHAR(255) NOT NULL,
+    trade_name VARCHAR(255) NOT NULL,
+    form VARCHAR(100) NOT NULL,
+    group_id INT NOT NULL,
+    CONSTRAINT fk_medicament_group FOREIGN KEY (group_id) REFERENCES accounting_groups(id) ON DELETE RESTRICT
+);
+
+CREATE TABLE batches (
+    id SERIAL PRIMARY KEY,
+    medicament_id INT NOT NULL,
+    batch_number VARCHAR(100) UNIQUE NOT NULL,
+    production_date DATE NOT NULL,
+    expiration_date DATE NOT NULL,
+    purchase_price DECIMAL(10, 2) NOT NULL,
+    initial_quantity INT NOT NULL,
+    current_quantity INT NOT NULL,
+    CONSTRAINT fk_batch_medicament FOREIGN KEY (medicament_id) REFERENCES medicaments(id) ON DELETE RESTRICT,
+    CONSTRAINT chk_dates CHECK (expiration_date > production_date),
+    CONSTRAINT chk_initial_qty CHECK (initial_quantity > 0),
+    CONSTRAINT chk_current_qty CHECK (current_quantity >= 0),
+    CONSTRAINT chk_price CHECK (purchase_price >= 0)
+);
+
+CREATE TABLE system_users (
+    tab_number VARCHAR(50) PRIMARY KEY,
+    full_name VARCHAR(255) NOT NULL,
+    position VARCHAR(100) NOT NULL,
+    department_id INT NOT NULL,
+    has_potent_access BOOLEAN DEFAULT FALSE,
+    password_hash VARCHAR(255) NOT NULL,
+    CONSTRAINT fk_user_department FOREIGN KEY (department_id) REFERENCES departments(id) ON DELETE RESTRICT
+);
+
+CREATE TABLE stock_operations (
+    id SERIAL PRIMARY KEY,
+    batch_id INT NOT NULL,
+    employee_id VARCHAR(50) NOT NULL,
+    department_id INT NOT NULL,
+    operation_type VARCHAR(20) NOT NULL,
+    operation_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    quantity INT NOT NULL,
+    total_cost DECIMAL(12, 2) NOT NULL,
+    CONSTRAINT fk_op_batch FOREIGN KEY (batch_id) REFERENCES batches(id) ON DELETE RESTRICT,
+    CONSTRAINT fk_op_employee FOREIGN KEY (employee_id) REFERENCES system_users(tab_number) ON DELETE RESTRICT,
+    CONSTRAINT fk_op_department FOREIGN KEY (department_id) REFERENCES departments(id) ON DELETE RESTRICT,
+    CONSTRAINT chk_op_type CHECK (operation_type IN ('приход', 'выдача', 'утилизация')),
+    CONSTRAINT chk_op_qty CHECK (quantity > 0),
+    CONSTRAINT chk_op_cost CHECK (total_cost >= 0)
+);
+
+CREATE TABLE archived_stock_logs (
+    id INT PRIMARY KEY,
+    batch_id INT NOT NULL,
+    employee_id VARCHAR(50) NOT NULL,
+    department_id INT NOT NULL,
+    operation_type VARCHAR(20) NOT NULL,
+    operation_date TIMESTAMP NOT NULL,
+    quantity INT NOT NULL,
+    total_cost DECIMAL(12, 2) NOT NULL,
+    archived_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE requests (
+    id SERIAL PRIMARY KEY,
+    medicament_id INT NOT NULL,
+    department_id INT NOT NULL,
+    employee_id VARCHAR(50) NOT NULL,
+    quantity INT NOT NULL,
+    request_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    status VARCHAR(20) DEFAULT 'новая',
+    completed_date TIMESTAMP,
+    CONSTRAINT fk_req_medicament FOREIGN KEY (medicament_id) REFERENCES medicaments(id) ON DELETE RESTRICT,
+    CONSTRAINT fk_req_department FOREIGN KEY (department_id) REFERENCES departments(id) ON DELETE RESTRICT,
+    CONSTRAINT fk_req_employee FOREIGN KEY (employee_id) REFERENCES system_users(tab_number) ON DELETE RESTRICT,
+    CONSTRAINT chk_req_status CHECK (status IN ('новая', 'выполнена')),
+    CONSTRAINT chk_req_qty CHECK (quantity > 0)
+);
+
+GRANT SELECT, INSERT, UPDATE ON ALL TABLES IN SCHEMA public TO stock_app;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO stock_app;

@@ -1,0 +1,43 @@
+Тест 1. Успешная выдача (Триггер должен сработать, посчитать стоимость и списать остаток)
+
+SELECT setval('stock_operations_id_seq', (SELECT MAX(id) FROM stock_operations));
+
+-- Пытаемся выдать 10 единиц из партии 1
+INSERT INTO stock_operations (batch_id, employee_id, department_id, operation_type, operation_date, quantity, total_cost)
+VALUES (1, 'EMP003', 1, 'выдача', CURRENT_TIMESTAMP, 10, 0);
+
+-- Смотрим, как изменился остаток в таблице партий (должно стать 845)
+SELECT id, batch_number, current_quantity FROM batches WHERE id = 1;
+
+-- Смотрим, как триггер заполнил стоимость в последней операции (должно быть 1500.00, т.к. 10 * 150)
+SELECT id, batch_id, quantity, total_cost FROM stock_operations ORDER BY id DESC LIMIT 1;
+
+
+Тест 2. Блокировка просрочки (Триггер должен выдать ошибку)
+
+-- Пытаемся выдать из партии 2 (Панадол, срок годности истек 01.06.2026)
+INSERT INTO stock_operations (batch_id, employee_id, department_id, operation_type, operation_date, quantity, total_cost)
+VALUES (2, 'EMP003', 1, 'выдача', CURRENT_TIMESTAMP, 10, 0);
+
+
+Тест 3. Блокировка нехватки (Триггер должен выдать ошибку)
+
+-- Пытаемся выдать 200 единиц из партии 3 (Морфин, но там осталось только 165)
+INSERT INTO stock_operations (batch_id, employee_id, department_id, operation_type, operation_date, quantity, total_cost)
+VALUES (3, 'EMP003', 1, 'выдача', CURRENT_TIMESTAMP, 200, 0);
+
+
+Тест 4. Успешная утилизация
+
+-- Утилизацию проводит складской рабочий EMP003.
+CALL write_off_expired_batch(2, 'EMP003');
+
+-- Остаток в партии должен стать строго 0
+SELECT id, batch_number, current_quantity FROM batches WHERE id = 2;
+
+-- В таблице операций должна появиться новая запись типа 'утилизация'
+SELECT * FROM public.stock_operations ORDER BY id ASC 
+
+
+
+

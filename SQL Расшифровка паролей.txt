@@ -1,0 +1,14 @@
+SELECT 
+    tab_number AS "Таб. номер",
+    full_name AS "ФИО",
+    convert_from(
+        decrypt(
+            decode(password_hash, 'hex'), 
+            'MedStock_Super_Secret_Key_2026!1'::BYTEA, 
+            'aes'
+        ), 
+        'UTF8'
+    ) AS "Расшифрованный пароль",
+    
+    password_hash AS "Зашифрованное значение"
+FROM system_users;
